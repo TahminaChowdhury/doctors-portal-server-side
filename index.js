@@ -5,6 +5,7 @@ const { MongoClient } = require('mongodb');
 require('dotenv').config();
 const ObjectId = require("mongodb").ObjectId;
 const admin = require("firebase-admin");
+const fileUpload = require("express-fileupload")
 const port = process.env.PORT || 5000;
 const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
@@ -21,6 +22,7 @@ admin.initializeApp({
 
 app.use(cors());
 app.use(express.json());
+app.use(fileUpload());
 
 // username- doctorsPortalDb
 // pass- t1MyKYBATPnQIMQ2
@@ -58,6 +60,7 @@ async function run () {
         const database = client.db("doctorsPortal");
         const appointmentsCollection = database.collection("appointments");
         const usersCollection = database.collection("users");
+        const doctorsCollection = database.collection("doctors");
 
 
         app.get('/appointments', async(req, res) => {
@@ -82,7 +85,7 @@ async function run () {
           console.log(result)
           res.json(result)
         });
-        
+
         // update appointment
         app.put('/appointments/:id', async(req,res) => {
           const id = req.params.id;
@@ -95,6 +98,27 @@ async function run () {
           }
           const result = await appointmentsCollection.updateOne(filter, updateDoc);
           res.send(result);
+        })
+
+        app.get("/doctors", async(req, res) => {
+          const result = await doctorsCollection.find({}).toArray()
+          res.send(result);
+        });
+
+        app.post('/doctors', async(req, res) => {
+          const name =  req.body.name;
+          const email =  req.body.email;
+          const pic =  req.files.image;
+          const picData = pic.data;
+          const encodedPic = picData.toString('base64');
+          const imageBuffer = Buffer.from(encodedPic, 'base64')
+          const doctor ={
+            name,
+            email,
+            image: imageBuffer
+          }
+          const result = await doctorsCollection.insertOne(doctor);
+          res.send(result)
         })
 
         // get er khetre usually params e request send kora hoy
